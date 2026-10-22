@@ -25,7 +25,7 @@ cd /DATA/AppData/nas-hub/agent && docker compose up -d --build
 
 Pour mettre à jour plus tard : `git pull` puis `docker compose up -d --build` (ou refaire le `scp`).
 
-Réglages dans `docker-compose.yml` : `DISK_PATHS` (disques affichés) et, si tu veux, `AGENT_TOKEN`.
+Réglages dans `docker-compose.yml` : si tu veux, `AGENT_TOKEN`. Les disques et les programmes sont détectés automatiquement (l'agent voit le système du NAS en lecture seule).
 Test : `curl http://IP_NAS:8787/api/system`
 
 ### Ajouter des LEDs et des prises (Tuya / Smart Life / Konyks)

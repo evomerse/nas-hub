@@ -3,13 +3,15 @@ services:
     build: .
     container_name: nas-hub-agent
     restart: unless-stopped
-    # Réseau de l'hôte : nécessaire pour retrouver les appareils Tuya sur le réseau local.
+    # Réseau de l'hôte : nécessaire pour retrouver les LEDs et appareils sur le réseau local.
     # L'agent écoute sur le port 8787.
     network_mode: host
+    # Voir les processus de l'hôte (top RAM). Lecture seule.
+    pid: host
     environment:
       AGENT_TOKEN: ""   # facultatif : mets un secret et saisis-le dans l'app
-      DISK_PATHS: "Système=/,Données=/host/DATA"
+      # NET_IFACE: "eth0"   # facultatif : interface réseau à mesurer (sinon toutes les interfaces physiques)
     volumes:
-      - /DATA:/host/DATA:ro
-      - /sys:/sys:ro
+      # Tout le système hôte en lecture seule : sert à détecter tous les disques et les noms des conteneurs.
+      - /:/host:ro,rslave
       - ./data:/config   # devices.json (écrit par l'app quand tu ajoutes des appareils)

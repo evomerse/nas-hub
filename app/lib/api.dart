@@ -50,11 +50,14 @@ class Settings {
 }
 
 class Disk {
-  final String name;
+  final String name, path, device, fstype;
   final int total, used;
   final double percent;
   Disk(Map<String, dynamic> j)
       : name = j['name'],
+        path = j['path'] ?? '',
+        device = j['device'] ?? '',
+        fstype = j['fstype'] ?? '',
         total = j['total'],
         used = j['used'],
         percent = (j['percent'] as num).toDouble();
@@ -68,6 +71,8 @@ class SystemStats {
   final double ramPercent;
   final List<Disk> disks;
   final double downBps, upBps;
+  final List<double> downHistory, upHistory; // octets/s, un point toutes les netIntervalS secondes
+  final int netIntervalS;
   final int uptimeS;
 
   SystemStats(Map<String, dynamic> j)
@@ -80,7 +85,23 @@ class SystemStats {
         disks = [for (final d in j['disks']) Disk(d)],
         downBps = (j['net']['down_bps'] as num).toDouble(),
         upBps = (j['net']['up_bps'] as num).toDouble(),
+        downHistory = [for (final v in j['net_history']['down']) (v as num).toDouble()],
+        upHistory = [for (final v in j['net_history']['up']) (v as num).toDouble()],
+        netIntervalS = j['net_history']['interval_s'],
         uptimeS = j['uptime_s'];
+}
+
+/// Programme ou conteneur Docker, avec la RAM qu'il utilise.
+class ProcUsage {
+  final String name, kind; // kind : container | process
+  final int ram, count;
+  final double percent;
+  ProcUsage(Map<String, dynamic> j)
+      : name = j['name'],
+        kind = j['kind'],
+        ram = j['ram'],
+        count = j['count'],
+        percent = (j['percent'] as num).toDouble();
 }
 
 class PlaySession {
@@ -330,6 +351,11 @@ class Api {
 
   Future<void> addDevices(List<String> ids) =>
       _post('${s.agentUrl}/api/devices/add', _agentHeaders, {'ids': ids});
+
+  Future<List<ProcUsage>> processes() async => [
+        for (final j in await _get('${s.agentUrl}/api/processes?limit=8', _agentHeaders) as List)
+          ProcUsage(j as Map<String, dynamic>)
+      ];
 
   Future<SystemStats> system() async => SystemStats(await _get(
       '${s.agentUrl}/api/system', _agentHeaders));
