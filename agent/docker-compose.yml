@@ -1,0 +1,15 @@
+services:
+  nas-hub-agent:
+    build: .
+    container_name: nas-hub-agent
+    restart: unless-stopped
+    # Réseau de l'hôte : nécessaire pour retrouver les appareils Tuya sur le réseau local.
+    # L'agent écoute sur le port 8787.
+    network_mode: host
+    environment:
+      AGENT_TOKEN: ""   # facultatif : mets un secret et saisis-le dans l'app
+      DISK_PATHS: "Système=/,Données=/host/DATA"
+    volumes:
+      - /DATA:/host/DATA:ro
+      - /sys:/sys:ro
+      - ./data:/config   # devices.json (écrit par l'app quand tu ajoutes des appareils)

@@ -1,0 +1,9 @@
+# Données locales et secrets : ne jamais publier
+agent/data/
+agent/.venv/
+app/build/
+app/.dart_tool/
+app/android/.gradle/
+app/android/local.properties
+*.jks
+*.keystore
