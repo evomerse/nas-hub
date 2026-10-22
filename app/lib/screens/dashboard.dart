@@ -63,66 +63,101 @@ class _DashboardState extends State<Dashboard> {
     _busy = false;
   }
 
+  /// Stats du NAS (CPU, RAM, réseau, disques).
+  List<Widget> _systemSection(BuildContext context) {
+    final st = stats;
+    if (st == null) {
+      return [
+        if (widget.api.s.hasAgent && error == null)
+          const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
+      ];
+    }
+    return [
+      Row(children: [
+        Expanded(child: _Gauge(label: 'CPU', value: st.cpu, text: '${st.cpu.toStringAsFixed(0)} %')),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _Gauge(
+            label: 'Température',
+            value: st.temp == null ? 0 : st.temp!.clamp(0, 100).toDouble(),
+            text: st.temp == null ? 'n/a' : '${st.temp!.toStringAsFixed(0)} °C',
+            color: _tempColor(st.temp),
+          ),
+        ),
+      ]),
+      const SizedBox(height: 12),
+      _Bar(
+        label: 'RAM',
+        percent: st.ramPercent,
+        detail: '${_bytes(st.ramUsed)} / ${_bytes(st.ramTotal)}',
+      ),
+      if (procs.isNotEmpty) _ProcessesCard(procs: procs),
+      _NetworkCard(stats: st),
+      const SizedBox(height: 4),
+      Text('Stockage', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      for (final dk in st.disks) _DiskCard(disk: dk),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text('Allumé depuis ${_uptime(st.uptimeS)}', style: Theme.of(context).textTheme.bodySmall),
+      ),
+    ];
+  }
+
+  /// Lectures Jellyfin et appareils connectés.
+  List<Widget> _mediaSection(BuildContext context) => [
+        if (widget.api.s.hasJellyfin) ...[
+          Text('En lecture sur Jellyfin', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (sessions.isEmpty)
+            const Padding(padding: EdgeInsets.all(16), child: Text('Personne ne regarde quoi que ce soit.')),
+          for (final s in sessions) _SessionCard(session: s, api: widget.api),
+          const SizedBox(height: 16),
+        ],
+        DevicesSection(api: widget.api),
+        const SizedBox(height: 24),
+      ];
+
+  Widget _errorBanner(BuildContext context) => Card(
+        color: Theme.of(context).colorScheme.errorContainer,
+        child: Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final st = stats;
     return Scaffold(
       appBar: AppBar(
         title: const Text('NAS Hub'),
         actions: [IconButton(icon: const Icon(Icons.settings), onPressed: widget.onSettings)],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(padding: const EdgeInsets.all(12), children: [
-          if (error != null)
-            Card(
-              color: Theme.of(context).colorScheme.errorContainer,
-              child: Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-            ),
-          if (st != null) ...[
-            Row(children: [
-              Expanded(child: _Gauge(label: 'CPU', value: st.cpu, text: '${st.cpu.toStringAsFixed(0)} %')),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _Gauge(
-                  label: 'Température',
-                  value: st.temp == null ? 0 : st.temp!.clamp(0, 100).toDouble(),
-                  text: st.temp == null ? 'n/a' : '${st.temp!.toStringAsFixed(0)} °C',
-                  color: _tempColor(st.temp),
+      body: LayoutBuilder(builder: (context, box) {
+        // Grand écran (PC) : stats à gauche, Jellyfin et appareils à droite. Téléphone : une colonne.
+        if (box.maxWidth >= 900) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1300),
+              child: Column(children: [
+                if (error != null) Padding(padding: const EdgeInsets.fromLTRB(12, 12, 12, 0), child: _errorBanner(context)),
+                Expanded(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(child: ListView(padding: const EdgeInsets.all(12), children: _systemSection(context))),
+                    Expanded(child: ListView(padding: const EdgeInsets.all(12), children: _mediaSection(context))),
+                  ]),
                 ),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            _Bar(
-              label: 'RAM',
-              percent: st.ramPercent,
-              detail: '${_bytes(st.ramUsed)} / ${_bytes(st.ramTotal)}',
+              ]),
             ),
-            if (procs.isNotEmpty) _ProcessesCard(procs: procs),
-            _NetworkCard(stats: st),
-            const SizedBox(height: 4),
-            Text('Stockage', style: Theme.of(context).textTheme.titleMedium),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(padding: const EdgeInsets.all(12), children: [
+            if (error != null) _errorBanner(context),
+            ..._systemSection(context),
             const SizedBox(height: 8),
-            for (final dk in st.disks) _DiskCard(disk: dk),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text('Allumé depuis ${_uptime(st.uptimeS)}', style: Theme.of(context).textTheme.bodySmall),
-            ),
-          ] else if (widget.api.s.hasAgent && error == null)
-            const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-          if (widget.api.s.hasJellyfin) ...[
-            const SizedBox(height: 8),
-            Text('En lecture sur Jellyfin', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (sessions.isEmpty)
-              const Padding(padding: EdgeInsets.all(16), child: Text('Personne ne regarde quoi que ce soit.')),
-            for (final s in sessions) _SessionCard(session: s, api: widget.api),
-          ],
-          const SizedBox(height: 16),
-          DevicesSection(api: widget.api),
-          const SizedBox(height: 24),
-        ]),
-      ),
+            ..._mediaSection(context),
+          ]),
+        );
+      }),
     );
   }
 }

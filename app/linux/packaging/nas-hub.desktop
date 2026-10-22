@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NAS Hub
+Comment=Tableau de bord du NAS : stats, Jellyfin, appareils connectés
+Exec=/opt/nas-hub/nas_hub
+Icon=nas-hub
+Terminal=false
+Categories=Utility;System;Monitor;

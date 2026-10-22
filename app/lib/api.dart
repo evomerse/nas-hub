@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Réglages saisis par l'utilisateur. Les secrets restent sur le téléphone
 /// (stockage chiffré), rien n'est codé en dur dans l'app ni dans l'agent.
@@ -22,22 +23,47 @@ class Settings {
   bool get isSet => hasAgent || hasJellyfin;
 
   static const _store = FlutterSecureStorage();
+  static const _keys = ['agentUrl', 'agentToken', 'jellyfinUrl', 'jellyfinKey'];
 
+  /// Lit les réglages : coffre chiffré en priorité, sinon préférences simples
+  /// (cas d'un PC Linux sans trousseau de clés).
   static Future<Settings> load() async {
-    Future<String> r(String k) async => await _store.read(key: k) ?? '';
+    final values = <String, String>{};
+    try {
+      for (final k in _keys) {
+        values[k] = await _store.read(key: k) ?? '';
+      }
+    } catch (_) {
+      final p = await SharedPreferences.getInstance();
+      for (final k in _keys) {
+        values[k] = p.getString(k) ?? '';
+      }
+    }
     return Settings(
-      agentUrl: await r('agentUrl'),
-      agentToken: await r('agentToken'),
-      jellyfinUrl: await r('jellyfinUrl'),
-      jellyfinKey: await r('jellyfinKey'),
+      agentUrl: values['agentUrl']!,
+      agentToken: values['agentToken']!,
+      jellyfinUrl: values['jellyfinUrl']!,
+      jellyfinKey: values['jellyfinKey']!,
     );
   }
 
   Future<void> save() async {
-    await _store.write(key: 'agentUrl', value: agentUrl);
-    await _store.write(key: 'agentToken', value: agentToken);
-    await _store.write(key: 'jellyfinUrl', value: jellyfinUrl);
-    await _store.write(key: 'jellyfinKey', value: jellyfinKey);
+    final values = {
+      'agentUrl': agentUrl,
+      'agentToken': agentToken,
+      'jellyfinUrl': jellyfinUrl,
+      'jellyfinKey': jellyfinKey,
+    };
+    try {
+      for (final e in values.entries) {
+        await _store.write(key: e.key, value: e.value);
+      }
+    } catch (_) {
+      final p = await SharedPreferences.getInstance();
+      for (final e in values.entries) {
+        await p.setString(e.key, e.value);
+      }
+    }
   }
 
   /// Ajoute http:// si absent et retire les "/" finaux.

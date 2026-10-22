@@ -49,6 +49,14 @@ flutter build apk --release
 
 L'APK est dans `app/build/app/outputs/flutter-apk/app-release.apk`.
 
+### Version PC (Zorin OS / Ubuntu)
+
+Le même code tourne sur Linux, avec une mise en page à deux colonnes sur grand écran. Le script `app/linux/build-deb.sh` compile dans un conteneur Ubuntu 22.04 (Docker requis) et produit `app/build/deb/nas-hub_0.1.0_amd64.deb`. Installation sur Zorin OS 17+ ou Ubuntu 22.04+ :
+
+```bash
+sudo apt install ./nas-hub_0.1.0_amd64.deb
+```
+
 ## 3. Premier lancement
 
 L'écran de réglages s'ouvre :
