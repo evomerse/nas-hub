@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import 'containers.dart';
 import 'devices.dart';
 
 class Dashboard extends StatefulWidget {
@@ -115,6 +116,8 @@ class _DashboardState extends State<Dashboard> {
           const SizedBox(height: 16),
         ],
         DevicesSection(api: widget.api),
+        const SizedBox(height: 16),
+        ContainersSection(api: widget.api),
         const SizedBox(height: 24),
       ];
 

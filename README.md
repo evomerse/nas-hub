@@ -28,6 +28,13 @@ Pour mettre à jour plus tard : `git pull` puis `docker compose up -d --build` (
 Réglages dans `docker-compose.yml` : si tu veux, `AGENT_TOKEN`. Les disques et les programmes sont détectés automatiquement (l'agent voit le système du NAS en lecture seule).
 Test : `curl http://IP_NAS:8787/api/system`
 
+### Conteneurs Docker
+
+La carte « Conteneurs » (sous les appareils) liste les conteneurs du NAS quand on touche « Scanner ». Toucher un conteneur ouvre un menu : démarrer, arrêter, redémarrer, pause, rebuild, logs, supprimer.
+
+- L'agent a besoin du socket Docker (`/var/run/docker.sock`, déjà dans `docker-compose.yml`). Ça lui donne le contrôle complet de Docker : mets un `AGENT_TOKEN`.
+- « Rebuild » n'existe que pour les conteneurs créés avec Docker Compose. Il lance `docker compose pull` puis `up -d --build --force-recreate` pour ce service, dans un petit conteneur `nas-hub-rebuild-…` (image `docker:cli`, téléchargée au premier rebuild). Le suivi est dans « Journal du rebuild ».
+
 ### Ajouter des LEDs et des prises (Tuya / Smart Life / Konyks)
 
 Tout se fait depuis l'app, section « Appareils » > « Ajouter ». Il faut préparer une seule fois un compte développeur Tuya (gratuit) :

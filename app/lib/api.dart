@@ -259,6 +259,30 @@ class FoundDevice {
         added = j['added'] == true;
 }
 
+/// Conteneur Docker du NAS.
+class DockerContainer {
+  final String id, name, image, state, status;
+  final String? project, service;
+  final bool canRebuild, isSelf;
+  final String? rebuildState; // starting | running | done | error
+  final String? rebuildError;
+  DockerContainer(Map<String, dynamic> j)
+      : id = j['id'],
+        name = j['name'],
+        image = j['image'] ?? '',
+        state = j['state'] ?? '',
+        status = j['status'] ?? '',
+        project = j['project'],
+        service = j['service'],
+        canRebuild = j['can_rebuild'] == true,
+        isSelf = j['self'] == true,
+        rebuildState = (j['rebuild'] as Map?)?['state'],
+        rebuildError = (j['rebuild'] as Map?)?['error'];
+  bool get running => state == 'running';
+  bool get paused => state == 'paused';
+  bool get rebuilding => rebuildState == 'starting' || rebuildState == 'running';
+}
+
 class ApiException implements Exception {
   final String message;
   ApiException(this.message);
@@ -290,11 +314,12 @@ class Api {
     }
   }
 
-  Future<void> _post(String url, Map<String, String> headers, Object body) async {
+  Future<void> _post(String url, Map<String, String> headers, Object body,
+      {Duration timeout = const Duration(seconds: 10)}) async {
     try {
       final r = await http
           .post(Uri.parse(url), headers: {...headers, 'Content-Type': 'application/json'}, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 10));
+          .timeout(timeout);
       if (r.statusCode == 401) throw ApiException('Clé ou token refusé (401)');
       if (r.statusCode >= 300) {
         var detail = '';
@@ -382,6 +407,31 @@ class Api {
         for (final j in await _get('${s.agentUrl}/api/processes?limit=8', _agentHeaders) as List)
           ProcUsage(j as Map<String, dynamic>)
       ];
+
+  Future<List<DockerContainer>> containers() async => [
+        for (final j in await _get('${s.agentUrl}/api/docker/containers', _agentHeaders) as List)
+          DockerContainer(j as Map<String, dynamic>)
+      ];
+
+  /// start, stop, restart, pause, unpause, remove, rebuild
+  Future<void> containerAction(String id, String action) => _post(
+      '${s.agentUrl}/api/docker/containers/$id/$action', _agentHeaders, {},
+      timeout: const Duration(seconds: 45));
+
+  /// Dernières lignes du journal du conteneur, ou du rebuild si [rebuild].
+  Future<String> containerLogs(String id, {bool rebuild = false}) async {
+    final url = '${s.agentUrl}/api/docker/containers/$id/${rebuild ? 'rebuild-logs' : 'logs?tail=300'}';
+    try {
+      final r = await http.get(Uri.parse(url), headers: _agentHeaders).timeout(const Duration(seconds: 15));
+      if (r.statusCode == 401) throw ApiException('Clé ou token refusé (401)');
+      if (r.statusCode != 200) throw ApiException('Erreur HTTP ${r.statusCode}');
+      return utf8.decode(r.bodyBytes, allowMalformed: true);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Injoignable : $url');
+    }
+  }
 
   Future<SystemStats> system() async => SystemStats(await _get(
       '${s.agentUrl}/api/system', _agentHeaders));

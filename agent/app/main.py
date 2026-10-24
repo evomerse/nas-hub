@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI
 
 from .auth import auth
 from .devices import router as devices_router
+from .docker_ctl import router as docker_router
 
 # Racine du système hôte montée dans le conteneur (voir docker-compose.yml). Vide = pas de conteneur.
 HOST_ROOT = os.environ.get("HOST_ROOT", "/host")
@@ -63,6 +64,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="NAS Hub agent", lifespan=lifespan)
 app.include_router(devices_router)
+app.include_router(docker_router)
 
 
 def cpu_temperature() -> float | None:

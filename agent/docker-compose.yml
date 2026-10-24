@@ -14,4 +14,7 @@ services:
     volumes:
       # Tout le système hôte en lecture seule : sert à détecter tous les disques et les noms des conteneurs.
       - /:/host:ro,rslave
-      - ./data:/config   # devices.json (écrit par l'app quand tu ajoutes des appareils)
+      - ./data:/config
+      # Pilotage des conteneurs (carte « Conteneurs » : arrêter, redémarrer, rebuild...).
+      # Attention : donne à l'agent le contrôle total de Docker. Mets un AGENT_TOKEN.
+      - /var/run/docker.sock:/var/run/docker.sock   # devices.json (écrit par l'app quand tu ajoutes des appareils)
